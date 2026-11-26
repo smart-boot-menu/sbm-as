@@ -132,7 +132,17 @@ mcopy -i "$ESP" "$CHAIN" ::/EFI/sbm/chain-target.efi
 printf 'external\n' >"$POC/external-payload.efi"
 mcopy -i "$EXT" "$POC/external-payload.efi" ::/EFI/sbm/external-payload.efi
 
+helper=$(CDPATH= cd -- "$SCRIPT_DIR/../../sbm-lab/scripts" && pwd)/sbm-resources.sh
+hold=$("$helper" reserve efi 1024 1 "$ROOT")
+release_hold() {
+    "$helper" release "$hold"
+}
+trap release_hold EXIT
+export SBM_RESOURCES="$helper"
+export SBM_RESERVATION="$hold"
+
 python3 - "$LOG" "$QEMU" "$OBJ/u-boot.bin" "$ESP" "$EXT" <<'PY'
+import os
 import subprocess
 import sys
 import time
@@ -183,6 +193,14 @@ for prefix in attempts:
         "usb-storage,bus=ehci.0,drive=ext",
     ]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    helper = os.environ.get("SBM_RESOURCES")
+    hold = os.environ.get("SBM_RESERVATION")
+    if helper and hold:
+        attached = subprocess.call([helper, "attach", hold, str(proc.pid)])
+        if attached != 0:
+            proc.kill()
+            proc.wait(timeout=10)
+            sys.exit(attached)
     lines = []
     deadline = time.time() + 90
     done = False
