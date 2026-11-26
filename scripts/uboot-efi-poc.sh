@@ -143,9 +143,16 @@ export SBM_RESERVATION="$hold"
 
 python3 - "$LOG" "$QEMU" "$OBJ/u-boot.bin" "$ESP" "$EXT" <<'PY'
 import os
+import signal
 import subprocess
 import sys
 import time
+
+def _stop(_signum, _frame):
+    raise SystemExit(128 + _signum)
+
+signal.signal(signal.SIGINT, _stop)
+signal.signal(signal.SIGTERM, _stop)
 
 log_path, qemu, bios, esp, ext = sys.argv[1:]
 attempts = [
@@ -193,31 +200,32 @@ for prefix in attempts:
         "usb-storage,bus=ehci.0,drive=ext",
     ]
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    helper = os.environ.get("SBM_RESOURCES")
-    hold = os.environ.get("SBM_RESERVATION")
-    if helper and hold:
-        attached = subprocess.call([helper, "attach", hold, str(proc.pid)])
-        if attached != 0:
+    try:
+        helper = os.environ.get("SBM_RESOURCES")
+        hold = os.environ.get("SBM_RESERVATION")
+        if helper and hold:
+            attached = subprocess.call([helper, "attach", hold, str(proc.pid)])
+            if attached != 0:
+                sys.exit(attached)
+        lines = []
+        deadline = time.time() + 90
+        done = False
+        while time.time() < deadline:
+            line = proc.stdout.readline()
+            if line == "" and proc.poll() is not None:
+                break
+            if line == "":
+                time.sleep(0.05)
+                continue
+            sys.stdout.write(line)
+            lines.append(line)
+            if "SBM-AS-PROBE: done" in line:
+                done = True
+                break
+    finally:
+        if proc.poll() is None:
             proc.kill()
-            proc.wait(timeout=10)
-            sys.exit(attached)
-    lines = []
-    deadline = time.time() + 90
-    done = False
-    while time.time() < deadline:
-        line = proc.stdout.readline()
-        if line == "" and proc.poll() is not None:
-            break
-        if line == "":
-            time.sleep(0.05)
-            continue
-        sys.stdout.write(line)
-        lines.append(line)
-        if "SBM-AS-PROBE: done" in line:
-            done = True
-            break
-    proc.kill()
-    proc.wait(timeout=10)
+        proc.wait(timeout=10)
     text = "".join(lines)
     chunks.append("SBM-AS-POC: command " + " ".join(cmd) + "\n" + text)
     with open(log_path, "w", encoding="utf-8") as handle:
