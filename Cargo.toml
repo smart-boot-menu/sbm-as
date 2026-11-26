@@ -1,0 +1,17 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/sbm-as-platform",
+    "crates/sbm-as-efi-probe",
+]
+default-members = ["crates/sbm-as-platform"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/smart-boot-menu/sbm-as"
+
+[workspace.dependencies]
+sbm-types = { path = "../sbm-common/crates/sbm-types", default-features = false }

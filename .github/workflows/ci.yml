@@ -9,11 +9,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify repository baseline (Cargo checks activate once Cargo.toml is added)
+        with:
+          path: sbm-as
+      - uses: actions/checkout@v4
+        with:
+          repository: smart-boot-menu/sbm-common
+          path: sbm-common
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: aarch64-unknown-uefi
+      - name: Host tests
+        working-directory: sbm-as
         run: |
-          test -f README.md && test -f AGENTS.md
-          if [ -f Cargo.toml ]; then
-            cargo fmt --all -- --check
-            cargo clippy --all-targets -- -D warnings
-            cargo test --workspace
-          fi
+          cargo fmt --all -- --check
+          cargo clippy --all-targets -- -D warnings
+          cargo test --workspace
+      - name: UEFI target check
+        working-directory: sbm-as
+        run: |
+          cargo check -p sbm-as-platform --no-default-features --target aarch64-unknown-uefi
+          cargo check -p sbm-as-efi-probe --features uefi-app --bins --target aarch64-unknown-uefi

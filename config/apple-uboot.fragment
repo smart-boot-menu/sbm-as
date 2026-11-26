@@ -1,0 +1,12 @@
+# Proposed delta from AsahiLinux/u-boot asahi-releng ec49c9d70e6ab003813d6f475fec62dc1c0f4bfe.
+# Not applied to a Mac in this milestone, and not tested on Apple hardware.
+#
+# The pinned defconfig already enables CONFIG_EFI_LOADER via its default,
+# NVMe, the simple framebuffer, the SPI and MTP keyboards, and USB xHCI.
+# It does not set a PREBOOT command, so USB storage is not started before
+# `bootflow scan -b`. External disks stay invisible to an EFI application
+# until something runs `usb start`.
+
+CONFIG_EFI_LOADER=y
+CONFIG_USE_PREBOOT=y
+CONFIG_PREBOOT="usb start"

@@ -1,0 +1,18 @@
+[package]
+name = "sbm-as-platform"
+description = "Capability-driven Apple Silicon platform adapter for Smart Boot Menu"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[features]
+default = ["std"]
+std = ["sbm-types/std"]
+
+[dependencies]
+sbm-types = { workspace = true }
+
+[dev-dependencies]
+sbm-types = { workspace = true, features = ["std"] }
