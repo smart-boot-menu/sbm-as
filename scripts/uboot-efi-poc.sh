@@ -133,6 +133,7 @@ printf 'external\n' >"$POC/external-payload.efi"
 mcopy -i "$EXT" "$POC/external-payload.efi" ::/EFI/sbm/external-payload.efi
 
 helper=$(CDPATH= cd -- "$SCRIPT_DIR/../../sbm-lab/scripts" && pwd)/sbm-resources.sh
+export SBM_OWNER_PID="$$"
 hold=$("$helper" reserve efi 1024 1 "$ROOT")
 release_hold() {
     "$helper" release "$hold"
